@@ -37,7 +37,9 @@ defmodule PasswordlessAuthTest do
     test "allows a custom verification code length" do
       recipient = "123"
       code_length = 9
-      assert <<_::bytes-size(code_length)>> = PasswordlessAuth.generate_code(recipient, code_length)
+
+      assert <<_::bytes-size(code_length)>> =
+               PasswordlessAuth.generate_code(recipient, code_length)
     end
   end
 

@@ -10,6 +10,7 @@ defmodule PasswordlessAuth do
   use Application
   alias PasswordlessAuth.{GarbageCollector, VerificationCode, Store}
 
+  @default_secret_key_length 16
   @default_verification_code_ttl 300
   @default_num_attempts_before_timeout 5
   @default_rate_limit_timeout_length 60
@@ -34,6 +35,8 @@ defmodule PasswordlessAuth do
   The verification code is valid for the number of seconds given to the
   `verification_code_ttl` config option (defaults to 300)
 
+  The secret key length used to generate the verification code is configured with the `default_secret_key_length` config option. Valid values: 16, 26, 32, 64. Defaults to 16 characters (80 bit secret).
+
   Arguments:
 
   - `recipient`: A reference to the recipient of the code. This is used for verifying the code with `verify_code/2`
@@ -44,11 +47,17 @@ defmodule PasswordlessAuth do
   @spec generate_code(String.t(), integer()) ::
           String.t()
   def generate_code(recipient, code_length \\ 6) do
-    code = VerificationCode.generate_code(code_length)
-
     ttl =
       Application.get_env(:passwordless_auth, :verification_code_ttl) ||
         @default_verification_code_ttl
+
+    secret_length =
+      Application.get_env(:passwordless_auth, :secret_key_length) ||
+        @default_secret_key_length
+
+    opts = [{:token_length, code_length}, {:interval_length, ttl}]
+    secret = OneTimePassEcto.Base.gen_secret(secret_length)
+    code = OneTimePassEcto.Base.gen_totp(secret, opts)
 
     expires = NaiveDateTime.utc_now() |> NaiveDateTime.add(ttl)
 
